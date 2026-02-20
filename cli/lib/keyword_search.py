@@ -35,6 +35,15 @@ class InvertedIndex:
         with open(self.docmap_path, 'wb') as docmap_file: 
             pickle.dump(self.docmap, docmap_file)
 
+    def load(self) -> None:
+        if not (os.path.exists(self.index_path) 
+                and os.path.exists(self.docmap_path)):
+            raise FileNotFoundError
+        with open(self.index_path, 'rb') as index_file:     
+            self.index = pickle.load(index_file)
+        with open(self.docmap_path, 'rb') as docmap_file: 
+            self.docmap = pickle.load(docmap_file)
+
     def get_documents(self, term: str) -> list[int]:
         doc_ids = self.index.get(term, set())
         return sorted(list(doc_ids))
@@ -49,20 +58,28 @@ def build_command() -> None:
     index = InvertedIndex()
     index.build()
     index.save()
-    docs = index.get_documents('merida')
-    print(f"First document for token 'merida' = {docs[0]}")
 
 
 def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
-    movies = load_movies()
+    index = InvertedIndex()
+    try:
+        index.load()
+    except FileNotFoundError:
+        print("index and docmap files are not found")
+        return
+    preprocessed_query = tokenize_text(query)
     results = []
-    for movie in movies:
-        preprocessed_query = tokenize_text(query)
-        preprocessed_title = tokenize_text(movie["title"])
-        if has_matching_token(preprocessed_query, preprocessed_title):
-            results.append(movie)
+    seen = set()
+    for token in  preprocessed_query:
+        matching_doc_ids = index.get_documents(token)
+        for doc_id in matching_doc_ids:
+            if doc_id in seen:
+                continue
+            seen.add(doc_id)
+            doc = index.docmap[doc_id]
+            results.append(doc)
             if len(results) >= limit:
-                break
+                return results
     return results
 
 def has_matching_token(query_tokens: list[str], title_tokens: list[str]) -> bool:
