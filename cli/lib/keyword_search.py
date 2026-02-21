@@ -1,7 +1,7 @@
 import string
 import os
 import pickle
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from nltk.stem import PorterStemmer
 
@@ -19,6 +19,8 @@ class InvertedIndex:
         self.docmap: dict[int, dict] = {}
         self.index_path = os.path.join(CACHE_DIR, "index.pkl")
         self.docmap_path = os.path.join(CACHE_DIR, "docmap.pkl")
+        self.tf_path = os.path.join(CACHE_DIR, "term_frequencies.pkl")
+        self.term_frequencies = defaultdict(Counter)
 
     def build(self) -> None:
         movies = load_movies()
@@ -30,34 +32,58 @@ class InvertedIndex:
 
     def save(self) -> None:
         os.makedirs(CACHE_DIR, exist_ok=True)
-        with open(self.index_path, 'wb') as index_file:     
-            pickle.dump(self.index, index_file)
-        with open(self.docmap_path, 'wb') as docmap_file: 
-            pickle.dump(self.docmap, docmap_file)
+        with open(self.index_path, 'wb') as f:     
+            pickle.dump(self.index, f)
+        with open(self.docmap_path, 'wb') as f: 
+            pickle.dump(self.docmap, f)
+        with open(self.tf_path, 'wb') as f:
+            pickle.dump(self.term_frequencies, f)
 
     def load(self) -> None:
         if not (os.path.exists(self.index_path) 
-                and os.path.exists(self.docmap_path)):
+                and os.path.exists(self.docmap_path) 
+                and os.path.exists(self.tf_path)):
             raise FileNotFoundError
-        with open(self.index_path, 'rb') as index_file:     
-            self.index = pickle.load(index_file)
-        with open(self.docmap_path, 'rb') as docmap_file: 
-            self.docmap = pickle.load(docmap_file)
+        with open(self.index_path, 'rb') as f:     
+            self.index = pickle.load(f)
+        with open(self.docmap_path, 'rb') as f: 
+            self.docmap = pickle.load(f)
+        with open(self.tf_path, 'rb') as f: 
+            self.term_frequencies = pickle.load(f)
 
     def get_documents(self, term: str) -> list[int]:
         doc_ids = self.index.get(term, set())
         return sorted(list(doc_ids))
-    
+        
     def __add_document(self, doc_id: int, text: str) -> None:
         tokens = tokenize_text(text)
         for token in set(tokens):
             self.index[token].add(doc_id)
+        self.term_frequencies[doc_id].update(tokens)
+    
+    def get_tf(self, doc_id: int, term: str) -> int:
+        term = tokenize_text(term)
+        if len(term) != 1:
+            raise ValueError("term must be a single token")
+        term = term[0]
+        return self.term_frequencies[doc_id][term]          
 
 
 def build_command() -> None:
     index = InvertedIndex()
     index.build()
     index.save()
+
+def tf_command(doc_id: int, term: str) -> int:
+    index = InvertedIndex()
+    try:
+        index.load()
+    except FileNotFoundError:
+        print("index and docmap and term_frequences files are not found")
+        return
+    frequency = index.get_tf(doc_id, term)
+    return frequency
+
 
 
 def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
