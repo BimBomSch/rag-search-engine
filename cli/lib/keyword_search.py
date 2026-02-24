@@ -41,10 +41,6 @@ class InvertedIndex:
             pickle.dump(self.term_frequencies, f)
 
     def load(self) -> None:
-        if not (os.path.exists(self.index_path) 
-                and os.path.exists(self.docmap_path) 
-                and os.path.exists(self.tf_path)):
-            raise FileNotFoundError
         with open(self.index_path, 'rb') as f:     
             self.index = pickle.load(f)
         with open(self.docmap_path, 'rb') as f: 
@@ -89,13 +85,9 @@ def build_command() -> None:
     index.build()
     index.save()
 
-def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
+def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
     index = InvertedIndex()
-    try:
-        index.load()
-    except FileNotFoundError:
-        print("index and docmap files are not found")
-        return
+    index.load()
     preprocessed_query = tokenize_text(query)
     results = []
     seen = set()
@@ -134,29 +126,17 @@ def tokenize_text(text: str) -> list[str]:
         stemmed_words.append(stemmer.stem(filtered_word))
     return stemmed_words
 
-def tf_command(doc_id: int, term: str):
+def tf_command(doc_id: int, term: str) -> int:
     index = InvertedIndex()
-    try:
-        index.load()
-    except FileNotFoundError:
-        print("index and docmap and term_frequences files are not found")
-        return
+    index.load()
     return index.get_tf(doc_id, term)
 
-def idf_command(term: str):
+def idf_command(term: str) -> float:
     index = InvertedIndex()
-    try:
-        index.load()
-    except FileNotFoundError:
-        print("index and docmap and term_frequences files are not found")
-        return
+    index.load()
     return index.get_idf(term)
 
-def tfidf_command(doc_id: int, term: str):
+def tfidf_command(doc_id: int, term: str) -> float:
     index = InvertedIndex()
-    try:
-        index.load()
-    except FileNotFoundError:
-        print("index and docmap and term_frequences files are not found")
-        return
+    index.load()
     return index.get_tf_idf(doc_id, term)
