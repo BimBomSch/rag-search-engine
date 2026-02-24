@@ -1,6 +1,7 @@
 import string
 import os
 import pickle
+import math
 from collections import defaultdict, Counter
 
 from nltk.stem import PorterStemmer
@@ -66,7 +67,16 @@ class InvertedIndex:
         if len(term) != 1:
             raise ValueError("term must be a single token")
         term = term[0]
-        return self.term_frequencies[doc_id][term]          
+        return self.term_frequencies[doc_id][term]
+
+    def get_idf(self, term: str) -> float:
+        tokens = tokenize_text(term)
+        if len(tokens) != 1:
+            raise ValueError("term must be a single token")
+        token = tokens[0]
+        doc_count = len(self.docmap)
+        term_doc_count = len(self.index[token])
+        return math.log((doc_count + 1) / (term_doc_count + 1))          
 
 
 def build_command() -> None:
@@ -74,17 +84,23 @@ def build_command() -> None:
     index.build()
     index.save()
 
-def tf_command(doc_id: int, term: str) -> int:
+def tfidf_command(doc_id: int, term: str):
     index = InvertedIndex()
     try:
         index.load()
     except FileNotFoundError:
         print("index and docmap and term_frequences files are not found")
         return
-    frequency = index.get_tf(doc_id, term)
-    return frequency
-
-
+    term = tokenize_text(term)
+    if len(term) != 1:
+        raise ValueError("term must be a single token")
+    term = term[0]
+    tf = index.get_tf(doc_id, term)
+    term_match_doc_count = len(index.get_documents(term))
+    total_doc_count = len(index.docmap)
+    idf = math.log((total_doc_count + 1) / (term_match_doc_count + 1))
+    tf_idf = tf * idf
+    return tf_idf
 
 def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
     index = InvertedIndex()
@@ -107,14 +123,6 @@ def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT):
             if len(results) >= limit:
                 return results
     return results
-
-def has_matching_token(query_tokens: list[str], title_tokens: list[str]) -> bool:
-    for query_token in query_tokens:
-        for title_token in title_tokens:
-            if query_token in title_token:
-                return True
-    return False
-
 
 def preprocess_text(text: str) -> str:
     text = text.lower()
@@ -139,3 +147,20 @@ def tokenize_text(text: str) -> list[str]:
         stemmed_words.append(stemmer.stem(filtered_word))
     return stemmed_words
 
+def tf_command(doc_id: int, term: str):
+    index = InvertedIndex()
+    try:
+        index.load()
+    except FileNotFoundError:
+        print("index and docmap and term_frequences files are not found")
+        return
+    return index.get_tf(doc_id, term)
+
+def idf_command(term: str):
+    index = InvertedIndex()
+    try:
+        index.load()
+    except FileNotFoundError:
+        print("index and docmap and term_frequences files are not found")
+        return
+    return index.get_idf(term)
