@@ -30,10 +30,10 @@ def main() -> None:
     idf_parser.add_argument("term", type=str, help="Term to get IDF for")
 
     tfidf_parser = subparsers.add_parser(
-        "tfidf", help="Get TF-IDF (Term Frequency-Inverse Document Frequency)"
+        "tfidf", help="Get TF-IDF (Term Frequency-Inverse Document Frequency) score for a given document ID and term"
     )
     tfidf_parser.add_argument("doc_id", type=int, help="Document ID")
-    tfidf_parser.add_argument("term", type=str, help="Term to get TF-IDF for")
+    tfidf_parser.add_argument("term", type=str, help="Term to get TF-IDF score for")
 
 
 
