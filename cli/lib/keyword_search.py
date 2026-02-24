@@ -64,6 +64,15 @@ class InvertedIndex:
             raise ValueError("term must be a single token")
         term = term[0]
         return self.term_frequencies[doc_id][term]
+    
+    def get_bm25_idf(self, term: str) -> float:
+        tokens = tokenize_text(term)
+        if len(tokens) != 1:
+            raise ValueError("term must be a single token")
+        token = tokens[0]
+        doc_count = len(self.docmap)
+        term_doc_count = len(self.index[token])
+        return math.log((doc_count - term_doc_count + 0.5) / (term_doc_count + 0.5) + 1)
 
     def get_idf(self, term: str) -> float:
         tokens = tokenize_text(term)
@@ -136,7 +145,13 @@ def idf_command(term: str) -> float:
     index.load()
     return index.get_idf(term)
 
+def bm25_idf_command(term: str) -> float:
+    index = InvertedIndex()
+    index.load()
+    return index.get_bm25_idf(term)
+
 def tfidf_command(doc_id: int, term: str) -> float:
     index = InvertedIndex()
     index.load()
     return index.get_tf_idf(doc_id, term)
+
