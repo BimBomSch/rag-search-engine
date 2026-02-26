@@ -10,7 +10,8 @@ from .search_utils import (
     BM25_K1,
     BM25_B,
     CACHE_DIR,
-    DEFAULT_SEARCH_LIMIT, 
+    DEFAULT_SEARCH_LIMIT,
+    format_search_result, 
     load_movies, 
     load_stopwords,
 )
@@ -112,7 +113,36 @@ class InvertedIndex:
     def __get_avg_doc_length(self) -> float:
         if not self.doc_lengths or len(self.doc_lengths) == 0:
             return 0.0
-        return sum(self.doc_lengths.values()) / len(self.doc_lengths)    
+        return sum(self.doc_lengths.values()) / len(self.doc_lengths)
+        
+    def bm25(self, doc_id: int, term: str) -> float:
+        bm25_tf = self.get_bm25_tf(doc_id, term)
+        bm25_idf = self.get_bm25_idf(term)
+        return bm25_tf * bm25_idf
+
+    def bm25_search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
+        preprocessed_query = tokenize_text(query)
+
+        scores = {}
+        for doc_id in self.docmap:
+            score = 0
+            for token in preprocessed_query:
+                score += self.bm25(doc_id, token)
+            scores[doc_id] = score
+
+        sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+
+        res = []
+        for doc_id, score in sorted_scores[:limit]:
+            doc = self.docmap[doc_id]
+            formatted_result = format_search_result(
+                doc_id=doc["id"],
+                title=doc["title"],
+                document=doc["description"],
+                score=score,
+            )
+            res.append(formatted_result)
+        return res
 
 
 def build_command() -> None:
@@ -185,4 +215,9 @@ def tfidf_command(doc_id: int, term: str) -> float:
     index = InvertedIndex()
     index.load()
     return index.get_tf_idf(doc_id, term)
+
+def bm25search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
+    index = InvertedIndex()
+    index.load()
+    return index.bm25_search(query, limit)
 
