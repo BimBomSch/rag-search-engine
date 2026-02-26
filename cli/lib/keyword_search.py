@@ -27,7 +27,7 @@ class InvertedIndex:
         self.tf_path = os.path.join(CACHE_DIR, "term_frequencies.pkl")
         self.doc_lengths_path = os.path.join(CACHE_DIR, "doc_lengths.pkl")
         self.term_frequencies = defaultdict(Counter)
-        self.doc_lengths: dict[int] = {}
+        self.doc_lengths: dict[int, int] = {}
         
     def build(self) -> None:
         movies = load_movies()
@@ -71,11 +71,11 @@ class InvertedIndex:
 
         
     def get_tf(self, doc_id: int, term: str) -> int:
-        term = tokenize_text(term)
-        if len(term) != 1:
+        token = tokenize_text(term)
+        if len(token) != 1:
             raise ValueError("term must be a single token")
-        term = term[0]
-        return self.term_frequencies[doc_id][term]
+        token = token[0]
+        return self.term_frequencies[doc_id][token]
 
     def get_idf(self, term: str) -> float:
         tokens = tokenize_text(term)
