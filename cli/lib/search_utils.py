@@ -16,6 +16,7 @@ CACHE_DIR = os.path.join(PROJECT_ROOT, "cache")
 
 DEFAULT_CHUNK_SIZE = 200
 DEFAULT_CHUNK_OVERLAP = 0
+DEFAULT_SEMANTIC_CHUNK_SIZE = 4
 
 def load_movies() -> list[dict]:
     with open(DATA_PATH, 'r') as file:

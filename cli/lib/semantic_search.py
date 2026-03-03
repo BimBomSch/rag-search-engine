@@ -1,4 +1,5 @@
 import os
+import re
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -8,6 +9,7 @@ from .search_utils import (
     DEFAULT_SEARCH_LIMIT,
     DEFAULT_CHUNK_SIZE,
     DEFAULT_CHUNK_OVERLAP,
+    DEFAULT_SEMANTIC_CHUNK_SIZE,
     load_movies,
 )
 
@@ -160,5 +162,35 @@ def chunk_text(
 ) -> None:
     chunks = fixed_size_chunking(text, chunk_size, overlap)
     print(f"Chunking {len(text)} characters")
+    for i, chunk in enumerate(chunks, 1):
+        print(f"{i}. {chunk}")
+
+def semantic_chunk(
+    text: str,
+    max_chunk_size: int = DEFAULT_SEMANTIC_CHUNK_SIZE,
+    overlap: int = DEFAULT_CHUNK_OVERLAP
+) -> list[str]:
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    chunks = []
+
+    n_sentences = len(sentences)
+    i = 0
+    while i < n_sentences:
+        chunk_sentences = sentences[i : i + max_chunk_size]
+        if chunks and len(chunk_sentences) <= overlap:
+            break
+
+        chunks.append(" ".join(chunk_sentences))
+        i += max_chunk_size - overlap
+
+    return chunks
+
+def semantic_chunk_text(
+    text: str,
+    max_chunk_size: int = DEFAULT_SEMANTIC_CHUNK_SIZE,
+    overlap: int = DEFAULT_CHUNK_OVERLAP
+) -> None:
+    chunks = semantic_chunk(text, max_chunk_size, overlap)
+    print(f"Semantically chunking {len(text)} characters")
     for i, chunk in enumerate(chunks, 1):
         print(f"{i}. {chunk}")
