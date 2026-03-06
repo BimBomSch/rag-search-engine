@@ -1,7 +1,11 @@
 import argparse
 
-from lib.search_utils import DEFAULT_SEARCH_LIMIT
-from lib.hybrid_search import normalize_scores, weighted_search_command
+from lib.search_utils import DEFAULT_SEARCH_LIMIT, DEFAULT_ALPHA, RRF_K
+from lib.hybrid_search import (
+    normalize_scores,
+    rrf_search_command,
+    weighted_search_command,
+)
 
 
 def main() -> None:
@@ -22,7 +26,7 @@ def main() -> None:
     weighted_search_parser.add_argument(
         "--alpha",
         type=float,
-        default=0.5,
+        default=DEFAULT_ALPHA,
         help="Weight for BM25 vs semantic (0=all semantic, 1=all BM25, default=0.5)"
     )
     weighted_search_parser.add_argument(
@@ -31,7 +35,23 @@ def main() -> None:
         default=DEFAULT_SEARCH_LIMIT,
         help=f"Number of results to return (default={DEFAULT_SEARCH_LIMIT})"
     )
-    
+
+    rrf_search_parser = subparsers.add_parser(
+        "rrf-search", help = "Perform Reciprocal Rank Fusion search"
+    )
+    rrf_search_parser.add_argument("query", type=str, help="Search query")
+    rrf_search_parser.add_argument(
+        "-k",
+        type=int,
+        default=RRF_K,
+        help=f"RRF k parameter controlling weight distribution (default={RRF_K})"
+    )
+    rrf_search_parser.add_argument(
+        "--limit",
+        type=int,
+        default=DEFAULT_SEARCH_LIMIT,
+        help=f"Number of results to return (default={DEFAULT_SEARCH_LIMIT})"
+    )
 
 
     args = parser.parse_args()
@@ -59,7 +79,26 @@ def main() -> None:
                     )
                 print(f"   {res['document'][:100]}...")
                 print()
-                
+        case "rrf-search":
+            result = rrf_search_command(args.query, args.k, args.limit)
+
+            print(
+                f"Reciprocal Rank Fusion Results for '{result['query']}' (k={result['k']}):"
+            )
+
+            for i, res in enumerate(result["results"], 1):
+                print(f"{i}. {res['title']}")
+                print(f"   RRF Score: {res.get('score', 0):.3f}")
+                metadata = res.get("metadata", {})
+                ranks = []
+                if metadata.get("bm25_rank"):
+                    ranks.append(f"BM25 Rank: {metadata['bm25_rank']}")
+                if metadata.get("semantic_rank"):
+                    ranks.append(f"Semantic Rank: {metadata['semantic_rank']}")
+                if ranks:
+                    print(f"   {', '.join(ranks)}")
+                print(f"   {res['document'][:100]}...")
+                print()      
         case _:
             parser.print_help()
 
