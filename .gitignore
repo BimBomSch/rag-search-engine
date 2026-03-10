@@ -13,3 +13,4 @@ wheels/
 /data/
 uv.lock
 cache/
+.env
