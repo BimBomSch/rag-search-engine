@@ -51,6 +51,25 @@ def rewrite_query(query: str) -> str:
     rewritten = (response.output_text or "").strip().strip('"')
     return rewritten if rewritten else query
 
+def expand_query(query: str) -> str:
+    prompt = f"""Expand the user-provided movie search query below with related terms.
+
+    Add synonyms and related concepts that might appear in movie descriptions.
+    Keep expansions relevant and focused.
+    Output additional terms and append to the original query.
+
+    Examples:
+    - "scary bear movie" -> "scary horror grizzly bear movie terrifying film"
+    - "action movie with bear" -> "action thriller bear chase fight adventure"
+    - "comedy with bear" -> "comedy funny bear humor lighthearted"
+
+    User query: "{query}"
+    """
+
+    response = client.responses.create(model=model, input=prompt,)
+    expanded_terms = (response.output_text or "").strip().strip('"')
+    return f"{expanded_terms}".strip()
+
 
 def enhance_query(query: str, method: Optional[str] = None) -> str:
     match method:
@@ -58,6 +77,8 @@ def enhance_query(query: str, method: Optional[str] = None) -> str:
             return spell_correct(query)
         case "rewrite":
             return rewrite_query(query)
+        case "expand":
+            return expand_query(query)
         case _:
             return query
 
