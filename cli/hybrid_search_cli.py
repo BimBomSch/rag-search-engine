@@ -47,12 +47,17 @@ def main() -> None:
         help=f"RRF k parameter controlling weight distribution (default={RRF_K})"
     )
     rrf_search_parser.add_argument(
+        "--enhance",
+        type=str,
+        choices=["spell"],
+        help="Query enhancement method",
+    )
+    rrf_search_parser.add_argument(
         "--limit",
         type=int,
         default=DEFAULT_SEARCH_LIMIT,
         help=f"Number of results to return (default={DEFAULT_SEARCH_LIMIT})"
     )
-
 
     args = parser.parse_args()
 
@@ -80,11 +85,12 @@ def main() -> None:
                 print(f"   {res['document'][:100]}...")
                 print()
         case "rrf-search":
-            result = rrf_search_command(args.query, args.k, args.limit)
+            result = rrf_search_command(args.query, args.k, args.enhance, args.limit)
 
-            print(
-                f"Reciprocal Rank Fusion Results for '{result['query']}' (k={result['k']}):"
-            )
+            if result["enhanced_query"]:
+                print(
+                    f"Enhanced query ({result['enhance_method']}): '{result['original_query']}' -> '{result['enhanced_query']}'\n"
+                )
 
             for i, res in enumerate(result["results"], 1):
                 print(f"{i}. {res['title']}")
