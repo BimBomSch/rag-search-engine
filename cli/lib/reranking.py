@@ -4,6 +4,7 @@ from time import sleep
 
 from dotenv import load_dotenv
 from openai import OpenAI
+from sentence_transformers import CrossEncoder
 
 load_dotenv()
 base_url = os.environ.get("BASE_URL")
@@ -13,6 +14,7 @@ if not api_key and not base_url:
 
 client = OpenAI(base_url=base_url, api_key=api_key,)
 model = "google/gemma-3-27b"
+cross_encoder = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
 
 
 def llm_rerank_individual(
@@ -88,6 +90,21 @@ def llm_rerank_batch(
 
     return reranked[:limit]
 
+def cross_encoder_rerank(
+    query: str, documents: list[dict], limit: int = 5
+) -> list[dict]:
+    pairs = []
+    for doc in documents:
+        pairs.append([query, f"{doc.get('title', '')} - {doc.get('document', '')}"])
+
+    scores = cross_encoder.predict(pairs)
+
+    for doc, score in zip(documents, scores):
+        doc["crossencoder_score"] = float(score)
+
+    documents.sort(key=lambda x: x["crossencoder_score"], reverse=True)
+    return documents[:limit]
+
 def rerank(
     query: str, documents: list[dict], method: str = "batch", limit: int = 5
 ) -> list[dict]:
@@ -95,5 +112,7 @@ def rerank(
         return llm_rerank_individual(query, documents, limit)
     if method == "batch":
         return llm_rerank_batch(query, documents, limit)
+    if method == "cross_encoder":
+        return cross_encoder_rerank(query, documents, limit)
     else:
         return documents[:limit]
